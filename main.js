@@ -1,12 +1,52 @@
 var model = {
     currentTag: "",
-    selectMultiple: false,
+    selectMultiple: true,
     categ: [],
+    activeCateg: "",
+    multipleCategs: [],
     linkMap: {},
     links: ".item__link",
     buttonContainer: ".categ",
+    updateCateg: function (category) {
+        var _ = this,
+            index;
+        if (_.selectMultiple) {
+            if (_.multipleCategs.indexOf(category) === -1) {
+                _.multipleCategs.push(category)
+            } else {
+                index = _.multipleCategs.indexOf(category);
+                _.multipleCategs.splice(index, 1);
+            }
+        } else {
+            if (_.activeCateg !== category) {
+                _.activeCateg = category;
+            }
+        }
+
+        _.updatePage();
+
+        // console.log("singe", _.activeCateg, "multiple", _.multipleCategs);
+    },
     setMultiple: function () {},
-    updatePage: function () {},
+    updatePage: function () {
+        var _ = this,
+            elements_to_activate = [],
+            activeLinks, activeButtons, items;
+        console.log(_.linkMap);
+        items = document.querySelectorAll(".item"),
+            items.forEach(function (item) {
+                _.helpers.addClass(item, "hidden");
+            });
+        if (_.selectMultiple) {
+            activeLinks = _.multipleCategs.reduce(function (init, current) {
+                return init.concat(_.linkMap[current]);
+            }, [])
+        } else {
+            activeLinks = _.linkMap[_.activeCateg];
+        }
+
+        console.log("active links", activeLinks);
+    },
     buildHTML: function () {
         /// build buttons
         var fragment = document.createDocumentFragment(),
@@ -49,8 +89,7 @@ var model = {
         var navOpen = document.querySelector(".page__open-side-button"),
             pageSide = document.querySelector(".page__side"),
             page = document.querySelector(".page"),
-            _ = this,
-            category_buttons = document.querySelectorAll(".category-button");
+            _ = this;
         navOpen.addEventListener("click", function (e) {
             e.preventDefault();
             if (_.helpers.hasClass(page, "page--side-open")) {
@@ -70,19 +109,14 @@ var model = {
         // on click, add class on all buttons with the same class
         // add hidden class on all associated link --> parent .item
 
-        category_buttons.forEach(function (button) {
-            button.addEventListener("click", function (e) {
-                var _ = model,
-                    button = this,
-                    category = button.getAttribute("data-trigger"),
-                    links = document.querySelector(_.links);
-
-                _.helpers.addClass()
-
-                links.forEach(function (link) {
-                    _.helpers.addClass()
-                })
-            })
+        page.addEventListener("click", function (e) {
+            var eventTarget = e.target,
+                btnSelector = ".category-button",
+                target;
+            if (_.helpers.matches(eventTarget, btnSelector)) {
+                target = eventTarget.getAttribute("data-trigger")
+                _.updateCateg(target)
+            }
         })
 
     },
@@ -129,7 +163,15 @@ var model = {
                 if (ancestor === elem.parentElement) return true
                 else return traverseUp(elem.parentElement, ancestor)
             }
-        }
+        },
+        matches: (function () {
+            var matchingFunction = Element.prototype.matches || Element.prototype.msMatchesSelector,
+                matches = function (element, selector) {
+                    return matchingFunction.call(element, selector);
+                };
+            return matches;
+
+        })()
     },
     init: function () {
         var _ = this;
