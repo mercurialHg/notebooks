@@ -57,7 +57,7 @@ var model = {
 
         categ.forEach(function (categ) {
             var button = _.helpers.buildButton('category-button categ__button categ__button--side', categ, categ);
-            fragment.append(button);
+            fragment.appendChild(button);
         });
 
         fragment.prepend(_.helpers.buildButton('category-button categ__button categ__button--reset', "Reset Categories", "reset"));
@@ -78,10 +78,10 @@ var model = {
             button_container.setAttribute("class", "item__butons");
             _.categ.forEach(function (category) {
                 if (categories.indexOf(category) !== -1) {
-                    button_container.append(_.helpers.buildButton('category-button categ__button', category, category));
+                    button_container.appendChild(_.helpers.buildButton('category-button categ__button', category, category));
                 }
             });
-            link.parentElement.append(button_container);
+            link.parentElement.appendChild(button_container);
             ///empty fragment
         });
     },
