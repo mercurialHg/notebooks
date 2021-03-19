@@ -18,6 +18,9 @@
         <aside class="page__side">
             <div class="page__side-inner categ">
                 <h2 class="page__side-title">Categories</h2>
+                <button type="button" class="reset-button page__side-close">
+                    <span class="sr-only">Close Category List Menu</span>
+                </button>
                 <button class="page__side-multiple reset-button toggle" type="button">
                     <span class="toggle__container">
                         <span class="toggle__toggler"></span>
@@ -26,7 +29,8 @@
             </div>
         </aside>
         <div class="page__open-side">
-            <button class="reset-button page__open-side-button" type="button">All Categories</button>
+            <button class="reset-button page__open-side-button" type="button" aria-label="Open Category List Menu">Category List</button>
+            <button class="category-button categ__button categ__button--side categ__button--reset" data-category="reset">Reset Categories</button>
         </div>
         <div class="items">
             <div class="item"><a class="item__link" data-category="template"  href="r-notebook-template/r-notebook-template.nb.html">R Notebook Template</a></div>
@@ -66,6 +70,7 @@
             <div class="item"><a class="item__link" data-category=""  href="Rezilienta-3scale/Rezilienta-3scale.nb.html">Rezilienta-3scale</a></div>
         </div>
     </div>
+    <script src="polyfills.js"></script>
     <script src="main.js"></script>
 </body>
 

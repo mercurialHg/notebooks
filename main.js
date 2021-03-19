@@ -1,6 +1,41 @@
+//polyfills
+
+var helpers = {
+    appendElem: function (elem, parent) {
+        parent.appendChild(elem);
+    },
+    hasClass: function (elem, className) {
+        var classList = elem.className;
+        if (classList.indexOf(className) !== -1) return true;
+        return false;
+    },
+    addClass: function (elem, className) {
+        var classNames = elem.className;
+        if (!this.hasClass(elem, className)) {
+            classNames += " " + className;
+            elem.className = classNames;
+        }
+    },
+    removeClass: function (elem, className) {
+        var classNames = elem.className;
+        if (this.hasClass(elem, className)) {
+            classNames = classNames.replace(className, "").trim();
+            elem.className = classNames;
+        }
+    },
+    ancestor: function (elem, ancestorSelector) {
+        return findAncestor(elem);
+
+        function findAncestor(elem) {
+            if (elem.parentElement === null) return false;
+            if (elem.matches(ancestorSelector)) return elem;
+            else return findAncestor(elem.parentElement);
+        }
+    }
+};
 var model = {
     currentTag: "",
-    selectMultiple: true,
+    selectMultiple: false,
     categ: [],
     activeCateg: "",
     multipleCategs: [],
@@ -8,11 +43,12 @@ var model = {
     links: ".item__link",
     buttonContainer: ".categ",
     updateCateg: function (category) {
+
         var _ = this,
             index;
         if (_.selectMultiple) {
             if (_.multipleCategs.indexOf(category) === -1) {
-                _.multipleCategs.push(category)
+                _.multipleCategs.push(category);
             } else {
                 index = _.multipleCategs.indexOf(category);
                 _.multipleCategs.splice(index, 1);
@@ -22,156 +58,141 @@ var model = {
                 _.activeCateg = category;
             }
         }
+        if (category === "reset") {
+            _.resetCategories();
+        } else {
+            _.updatePage();
+        }
 
-        _.updatePage();
 
         // console.log("singe", _.activeCateg, "multiple", _.multipleCategs);
     },
-    setMultiple: function () {},
+    setMultiple: function (value) {
+        if (typeof value === "boolean") this.selectMultiple = value;
+        else throw "Value is not Boolean";
+    },
+    resetCategories: function () {
+        var _ = this,
+            items = document.querySelectorAll(".item");
+
+        items.forEach(function (item) {
+            helpers.removeClass(item, "hidden");
+        });
+    },
     updatePage: function () {
         var _ = this,
             elements_to_activate = [],
             activeLinks, activeButtons, items;
-        console.log(_.linkMap);
-        items = document.querySelectorAll(".item"),
-            items.forEach(function (item) {
-                _.helpers.addClass(item, "hidden");
-            });
+        // console.log(_.linkMap);
+
         if (_.selectMultiple) {
             activeLinks = _.multipleCategs.reduce(function (init, current) {
                 return init.concat(_.linkMap[current]);
-            }, [])
+            }, []);
         } else {
             activeLinks = _.linkMap[_.activeCateg];
         }
 
-        console.log("active links", activeLinks);
-    },
-    buildHTML: function () {
-        /// build buttons
-        var fragment = document.createDocumentFragment(),
-            _ = this,
-            categ = _.categ,
-            buttonContainers,
-            links;
+        items = document.querySelectorAll(".item");
+        items.forEach(function (item) {
+            helpers.addClass(item, "hidden");
+        });
 
+        activeLinks.forEach(function (link) {
+            var item = helpers.ancestor(link, ".item");
+            helpers.removeClass(item, "hidden");
+        });
+    },
+    buildNav: function () {
+        var _ = this,
+            fragment = document.createDocumentFragment(),
+            categ = _.categ,
+            buttonContainers;
+
+        // build navigation
         categ.forEach(function (categ) {
-            var button = _.helpers.buildButton('category-button categ__button categ__button--side', categ, categ);
+            var button = _._buildButton('category-button categ__button categ__button--side', categ, categ);
             fragment.appendChild(button);
         });
 
-        fragment.prepend(_.helpers.buildButton('category-button categ__button categ__button--reset', "Reset Categories", "reset"));
+        fragment.prepend(_._buildButton('category-button categ__button categ__button--side categ__button--reset', "Reset Categories", "reset"));
 
         buttonContainers = Array.prototype.slice.call(document.querySelectorAll(_.buttonContainer));
         buttonContainers.forEach(function (container) {
             container.appendChild(fragment.cloneNode(true));
-
         });
-        ///empty fragment
-        fragment.replaceChildren();
+    },
+    buildItems: function () {
+        var _ = this,
+            fragment = document.createDocumentFragment(),
+            links = document.querySelectorAll(_.links);
 
-        /// go through each link
-        links = Array.prototype.slice.call(document.querySelectorAll(_.links));
         links.forEach(function (link) {
             var categories = link.getAttribute("data-category").trim().replace(/\s+/, " ").split(" "),
-                button_container = document.createElement("div");
-            button_container.setAttribute("class", "item__butons");
+                button_container = document.createElement("div"),
+                item = helpers.ancestor(link, '.item');
+            button_container.setAttribute("class", "item__buttons");
             _.categ.forEach(function (category) {
                 if (categories.indexOf(category) !== -1) {
-                    button_container.appendChild(_.helpers.buildButton('category-button categ__button', category, category));
+                    button_container.appendChild(_._buildButton('category-button categ__button', category, category));
                 }
             });
-            link.parentElement.appendChild(button_container);
-            ///empty fragment
+
+            if (item) item.appendChild(button_container);
         });
+    },
+    buildHTML: function () {
+        var _ = this;
+
+        _.buildNav();
+        _.buildItems();
+
     },
     bindEvents: function () {
         var navOpen = document.querySelector(".page__open-side-button"),
+            navClose = document.querySelector(".page__side-close"),
             pageSide = document.querySelector(".page__side"),
             page = document.querySelector(".page"),
             _ = this;
         navOpen.addEventListener("click", function (e) {
             e.preventDefault();
-            if (_.helpers.hasClass(page, "page--side-open")) {
-                _.helpers.removeClass(page, "page--side-open")
+            if (helpers.hasClass(page, "page--side-open")) {
+                helpers.removeClass(page, "page--side-open");
             } else {
-                _.helpers.addClass(page, "page--side-open")
+                helpers.addClass(page, "page--side-open");
             }
         });
+        navClose.addEventListener("click", function (e) {
+            helpers.removeClass(page, "page--side-open");
+        });
         pageSide.addEventListener("click", function (e) {
-            if (!_.helpers.hasAncestor(e.target, document.querySelector(".page__side-inner"))) {
-                _.helpers.removeClass(page, "page--side-open");
+            if (!helpers.ancestor(e.target, ".page__side-inner")) {
+                helpers.removeClass(page, "page--side-open");
             }
         });
 
         /// bind events on buttons
 
-        // on click, add class on all buttons with the same class
-        // add hidden class on all associated link --> parent .item
-
         page.addEventListener("click", function (e) {
             var eventTarget = e.target,
                 btnSelector = ".category-button",
                 target;
-            if (_.helpers.matches(eventTarget, btnSelector)) {
-                target = eventTarget.getAttribute("data-trigger")
-                _.updateCateg(target)
+            if (eventTarget.matches(btnSelector)) {
+                target = eventTarget.getAttribute("data-category");
+                _.updateCateg(target);
             }
-        })
+        });
 
     },
-    helpers: {
-        buildButton: function (buttonClass, text, categ) {
-            if (buttonClass === 'string') {
-                buttonClass = [buttonClass];
-            }
-            var button = document.createElement("button");
-            button.textContent = text;
-            button.setAttribute("class", buttonClass);
-            button.setAttribute("data-trigger", categ);
-            return button;
-        },
-        appendElem: function (elem, parent) {
-            parent.appendChild(elem);
-        },
-        hasClass: function (elem, className) {
-            var classList = elem.className;
-            if (classList.indexOf(className) !== -1) return true
-            return false
-        },
-        addClass: function (elem, className) {
-            var classNames = elem.className;
-            if (!this.hasClass(elem, className)) {
-                classNames += " " + className;
-                elem.className = classNames;
-            }
-        },
-        removeClass: function (elem, className) {
-            var classNames = elem.className;
-            if (this.hasClass(elem, className)) {
-                classNames = classNames.replace(className, "").trim();
-                elem.className = classNames;
-            }
-        },
-        hasAncestor: function (elem, ancestor) {
-            return traverseUp(elem, ancestor)
-
-
-            function traverseUp(elem, ancestor) {
-                if (elem.parentElement === null) return false
-                if (elem === ancestor) return true
-                if (ancestor === elem.parentElement) return true
-                else return traverseUp(elem.parentElement, ancestor)
-            }
-        },
-        matches: (function () {
-            var matchingFunction = Element.prototype.matches || Element.prototype.msMatchesSelector,
-                matches = function (element, selector) {
-                    return matchingFunction.call(element, selector);
-                };
-            return matches;
-
-        })()
+    _buildButton: function (buttonClass, text, categ) {
+        if (buttonClass === 'string') {
+            buttonClass = [buttonClass];
+        }
+        var button = document.createElement("button");
+        button.textContent = text;
+        button.setAttribute("class", buttonClass);
+        if (categ) button.setAttribute("data-category", categ);
+        return button;
     },
     init: function () {
         var _ = this;
@@ -188,7 +209,7 @@ var model = {
             // ensure all category tags are lowercase
             item.setAttribute('data-category', tag);
             if (!linkMap[tag]) {
-                linkMap[tag] = [item]
+                linkMap[tag] = [item];
             } else {
                 linkMap[tag].push(item);
             }
@@ -197,13 +218,13 @@ var model = {
         _.linkMap = linkMap;
         _.categ = Object.keys(linkMap).sort();
 
-        console.log(_)
+        console.log(_);
 
         _.buildHTML();
 
         _.bindEvents();
     }
-}
+};
 
 
 model.init();
