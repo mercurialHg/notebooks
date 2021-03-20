@@ -27,7 +27,7 @@ var helpers = {
         return findAncestor(elem);
 
         function findAncestor(elem) {
-            if (elem.parentElement === null) return false;
+            if (elem.parentElement === null) return null;
             if (elem.matches(ancestorSelector)) return elem;
             else return findAncestor(elem.parentElement);
         }
@@ -35,41 +35,56 @@ var helpers = {
 };
 var model = {
     currentTag: "",
-    selectMultiple: false,
-    categ: [],
-    activeCateg: "",
-    multipleCategs: [],
     linkMap: {},
-    links: ".item__link",
+    categ: [],
+    activeCategories: [],
+    linkSelector: ".item__link",
     buttonContainer: ".categ",
+    selectMultiple: false,
+    multipleSelector: ".page__multiple",
+    multipleClass: "js--pressed",
+    multipleList: null,
+    multipleRegister: function () {
+        this.multipleList = document.querySelectorAll(this.multipleSelector);
+    },
     updateCateg: function (category) {
-
         var _ = this,
             index;
         if (_.selectMultiple) {
-            if (_.multipleCategs.indexOf(category) === -1) {
-                _.multipleCategs.push(category);
+            if (_.activeCategories.indexOf(category) === -1) {
+                _.activeCategories.push(category);
             } else {
-                index = _.multipleCategs.indexOf(category);
-                _.multipleCategs.splice(index, 1);
+                index = _.activeCategories.indexOf(category);
+                _.activeCategories.splice(index, 1);
             }
         } else {
-            if (_.activeCateg !== category) {
-                _.activeCateg = category;
+            if (_.activeCategories.indexOf(category) === -1) {
+                _.activeCategories = [category];
             }
         }
         if (category === "reset") {
             _.resetCategories();
+            _.activeCategories = [];
         } else {
-            _.updatePage();
+            _.updateMain();
+            _.updateSide();
         }
-
-
-        // console.log("singe", _.activeCateg, "multiple", _.multipleCategs);
     },
-    setMultiple: function (value) {
-        if (typeof value === "boolean") this.selectMultiple = value;
-        else throw "Value is not Boolean";
+    updateAllToggles: function (value) {
+        var _ = this;
+        if (typeof value !== "boolean") throw "Value not boolean";
+        _.selectMultiple = value;
+        if (value) {
+            _.multipleList.forEach(function (toggle) {
+                helpers.addClass(toggle, _.multipleClass);
+                toggle.setAttribute("aria-pressed", "" + value);
+            });
+        } else {
+            _.multipleList.forEach(function (toggle) {
+                helpers.removeClass(toggle, _.multipleClass);
+                toggle.setAttribute("aria-pressed", "" + value);
+            });
+        }
     },
     resetCategories: function () {
         var _ = this,
@@ -79,18 +94,17 @@ var model = {
             helpers.removeClass(item, "hidden");
         });
     },
-    updatePage: function () {
+    updateMain: function () {
         var _ = this,
-            elements_to_activate = [],
-            activeLinks, activeButtons, items;
+            activeLinks, items;
         // console.log(_.linkMap);
 
         if (_.selectMultiple) {
-            activeLinks = _.multipleCategs.reduce(function (init, current) {
+            activeLinks = _.activeCategories.reduce(function (init, current) {
                 return init.concat(_.linkMap[current]);
             }, []);
         } else {
-            activeLinks = _.linkMap[_.activeCateg];
+            activeLinks = _.linkMap[_.activeCategories[0]];
         }
 
         items = document.querySelectorAll(".item");
@@ -103,6 +117,37 @@ var model = {
             helpers.removeClass(item, "hidden");
         });
     },
+    updateSide: function () {
+        var _ = this,
+            sideButtons = document.querySelectorAll(".categ__button--side");
+
+        sideButtons.forEach(function (sideButton) {
+            var category = sideButton.getAttribute("data-category");
+            if (_.activeCategories.indexOf(category) === -1) {
+                helpers.removeClass(sideButton, "button--inverted");
+            } else {
+                helpers.addClass(sideButton, "button--inverted")
+            }
+        });
+
+    },
+    buildHTML: function () {
+        var _ = this;
+
+        _.buildNav();
+        _.buildItems();
+
+    },
+    _buildButton: function (buttonClass, text, categ) {
+        if (buttonClass === 'string') {
+            buttonClass = [buttonClass];
+        }
+        var button = document.createElement("button");
+        button.textContent = text;
+        button.setAttribute("class", buttonClass);
+        if (categ) button.setAttribute("data-category", categ);
+        return button;
+    },
     buildNav: function () {
         var _ = this,
             fragment = document.createDocumentFragment(),
@@ -111,11 +156,11 @@ var model = {
 
         // build navigation
         categ.forEach(function (categ) {
-            var button = _._buildButton('category-button categ__button categ__button--side', categ, categ);
+            var button = _._buildButton('button categ__button categ__button--side', categ, categ);
             fragment.appendChild(button);
         });
 
-        fragment.prepend(_._buildButton('category-button categ__button categ__button--side categ__button--reset', "Reset Categories", "reset"));
+        fragment.prepend(_._buildButton('button categ__button categ__button--side categ__button--reset', "Reset Categories", "reset"));
 
         buttonContainers = Array.prototype.slice.call(document.querySelectorAll(_.buttonContainer));
         buttonContainers.forEach(function (container) {
@@ -125,7 +170,7 @@ var model = {
     buildItems: function () {
         var _ = this,
             fragment = document.createDocumentFragment(),
-            links = document.querySelectorAll(_.links);
+            links = document.querySelectorAll(_.linkSelector);
 
         links.forEach(function (link) {
             var categories = link.getAttribute("data-category").trim().replace(/\s+/, " ").split(" "),
@@ -134,22 +179,15 @@ var model = {
             button_container.setAttribute("class", "item__buttons");
             _.categ.forEach(function (category) {
                 if (categories.indexOf(category) !== -1) {
-                    button_container.appendChild(_._buildButton('category-button categ__button', category, category));
+                    button_container.appendChild(_._buildButton('button categ__button', category, category));
                 }
             });
 
             if (item) item.appendChild(button_container);
         });
     },
-    buildHTML: function () {
-        var _ = this;
-
-        _.buildNav();
-        _.buildItems();
-
-    },
     bindEvents: function () {
-        var navOpen = document.querySelector(".page__open-side-button"),
+        var navOpen = document.querySelector(".page__top-button-side-open"),
             navClose = document.querySelector(".page__side-close"),
             pageSide = document.querySelector(".page__side"),
             page = document.querySelector(".page"),
@@ -175,7 +213,7 @@ var model = {
 
         page.addEventListener("click", function (e) {
             var eventTarget = e.target,
-                btnSelector = ".category-button",
+                btnSelector = ".categ__button",
                 target;
             if (eventTarget.matches(btnSelector)) {
                 target = eventTarget.getAttribute("data-category");
@@ -183,16 +221,25 @@ var model = {
             }
         });
 
-    },
-    _buildButton: function (buttonClass, text, categ) {
-        if (buttonClass === 'string') {
-            buttonClass = [buttonClass];
-        }
-        var button = document.createElement("button");
-        button.textContent = text;
-        button.setAttribute("class", buttonClass);
-        if (categ) button.setAttribute("data-category", categ);
-        return button;
+        /// bind events on multiple toggles
+
+        page.addEventListener("click", function (e) {
+            console.log("model", _);
+            var eventTarget = e.target,
+                toggleSelector = _.multipleSelector,
+                ancestor, isPressed;
+
+            ancestor = helpers.ancestor(eventTarget, toggleSelector);
+
+            if (ancestor !== null) {
+                isPressed = ancestor.getAttribute("aria-pressed") === "false" ? false : true;
+                if (isPressed) {
+                    ///  if selected -> not selected, remember only latest selected category
+                    _.activeCategories = _.activeCategories.slice(-1);
+                }
+                _.updateAllToggles(!isPressed);
+            }
+        });
     },
     init: function () {
         var _ = this;
@@ -218,11 +265,14 @@ var model = {
         _.linkMap = linkMap;
         _.categ = Object.keys(linkMap).sort();
 
-        console.log(_);
+        // console.log(_);
 
         _.buildHTML();
 
+        _.multipleRegister();
+
         _.bindEvents();
+
     }
 };
 
